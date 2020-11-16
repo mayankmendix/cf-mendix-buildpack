@@ -20,5 +20,5 @@ def generate_config(config):
         azkarra_home=azkarra_home,
         broker_password=broker_password,
         broker_username=broker_username,
-        stream_version=streams.PDR_STREAMS_VERSION,
+        stream_version=streams.get_pdr_stream_version(),
     )

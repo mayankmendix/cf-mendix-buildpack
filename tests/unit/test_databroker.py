@@ -29,7 +29,7 @@ LOG4J_DEBEZIUM_CFG_PATH = "{}/{}".format(
 )
 
 STREAM_SIDECAR_DIR = "{}/producer-streams/stream-sidecar-{}".format(
-    LOCAL_DATABROKER_FOLDER, streams.PDR_STREAMS_VERSION
+    LOCAL_DATABROKER_FOLDER, streams.get_pdr_stream_version()
 )
 STREAM_TOPOLOGY_CFG_NAME = "topology.conf"
 STREAM_TOPOLOGY_CFG_PATH = "{}/{}".format(
@@ -192,6 +192,13 @@ class TestDataBrokerConfigs(unittest.TestCase):
             debezium_config["config"]["column.whitelist"]
             == ".*MyFirstModule.company.*,MyFirstModule.company.id,.*MyFirstModule.project.*,MyFirstModule.project.id"
         )
+    
+    def test_streams_override(self):
+        os.environ["STREAMS_VERSION"] = "0.99999"
+        assert(streams.get_pdr_stream_version() == "0.99999")
+        del os.environ["STREAMS_VERSION"] # reset
+        # default
+        assert(streams.get_pdr_stream_version() == "0.23.0-9")
 
     # There are two configs for streams, one is topology.conf another is azkarra.conf
     # Make sure specifice fields would be replaced with correct value based on template file
