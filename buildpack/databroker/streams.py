@@ -17,7 +17,6 @@ from buildpack.databroker.config_generator.scripts.utils import write_file
 BASE_URL = "/mx-buildpack/experimental/databroker/"
 TAR_EXT = "tar"
 BASE_DIR = "databroker"
-AZKARRA_HOME = os.path.join(BASE_DIR, "azkarra")
 AZKARRA_TPLY_CONF_NAME = "topology.conf"
 PDR_STREAMS_FILENAME = "stream-sidecar"
 PDR_STREAMS_VERSION = "0.22.0-8"
@@ -26,6 +25,7 @@ PDR_STREAMS_HOME = os.path.join(
     PDR_STREAMS_DIR, "{}-{}".format(PDR_STREAMS_FILENAME, PDR_STREAMS_VERSION)
 )
 LOCAL = ".local"
+LOG_LEVEL = "DEBUG" if util.is_buildpack_debug_logging_enabled() else "INFO"
 AZKARRA_CONF_PATH = os.path.join(
     os.getcwd(), LOCAL, PDR_STREAMS_HOME, "azkarra.conf"
 )
@@ -73,7 +73,9 @@ def run(complete_conf):
     java_path = os.path.join(os.getcwd(), LOCAL, "bin")
     os.environ["PATH"] += os.pathsep + java_path
     os.environ["JMX_PORT"] = KAFKA_STREAMS_JMX_PORT
+    os.environ["LOG_LEVEL"] = LOG_LEVEL
     env = dict(os.environ)
+
     kafka_streams_process = DataBrokerProcess(
         PROCESS_NAME,
         (

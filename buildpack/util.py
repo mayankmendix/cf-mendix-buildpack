@@ -158,6 +158,10 @@ def get_buildpack_loglevel():
     return logging.INFO
 
 
+def is_buildpack_debug_logging_enabled():
+    return get_buildpack_loglevel() == logging.DEBUG
+
+
 def download(url, destination):
     logging.debug(
         "downloading {url} to {destination}".format(
