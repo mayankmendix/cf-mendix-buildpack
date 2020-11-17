@@ -5,6 +5,8 @@ import re
 import subprocess
 
 import certifi
+import pem
+from cryptography import x509
 
 from buildpack import util
 
@@ -77,61 +79,50 @@ def ensure_and_get_jvm(
 
 
 def update_java_cacert(buildpack_dir, jvm_location):
-    logging.debug("Applying Mozilla CA certificates update to JVM cacerts...")
+    logging.debug("Importing Mozilla CA certificates into JVM keystore...")
     cacerts_file = os.path.join(jvm_location, "lib", "security", "cacerts")
     if not os.path.exists(cacerts_file):
         logging.warning(
-            "Cannot locate Java cacerts file %s. Skipping update of CA certificates.",
+            "Cannot locate Java cacerts file %s. Skipping update of JVM CA certificates.",
             cacerts_file,
         )
         return
 
-    keyutil_path = os.path.join(
-        buildpack_dir, "vendor", "cacert", "keyutil-0.4.0.jar"
-    )
-    if not os.path.exists(keyutil_path):
-        logging.warning(
-            "Cannot locate keyutil at %s. Skipping update of CA certificates.",
-            keyutil_path,
-        )
-        return
+    # Parse the Mozilla CA certificate bundle from certifi and import it into the keystore
+    for certificate in pem.parse_file(certifi.where()):
 
-    update_cacert_path = certifi.where()
-    if not os.path.exists(update_cacert_path):
-        logging.warning(
-            "Cannot locate Mozilla certificates at %s. Skipping update of CA certificates.",
-            update_cacert_path,
-        )
-        return
+        # Generate the alias string
+        alias = x509.load_pem_x509_certificate(
+            certificate.as_bytes()
+        ).issuer.rfc4514_string()
 
-    cacert_merged = "cacerts.merged"
-    env = dict(os.environ)
+        # Import the certificate into the keystore
+        try:
+            subprocess.check_output(
+                (
+                    os.path.join(jvm_location, "bin", "keytool"),
+                    "-noprompt",
+                    "-import",
+                    "-trustcacerts",
+                    "-keystore",
+                    cacerts_file,
+                    "-alias",
+                    '"{}"'.format(alias),
+                    "-storepass",
+                    "changeit",
+                ),
+                env=dict(os.environ),
+                input=certificate.as_bytes(),
+                stderr=subprocess.STDOUT,
+            )
+            logging.debug("Imported certificate [{}]".format(alias))
+        except subprocess.CalledProcessError as ex:
+            logging.error(
+                "Error importing certificate [{}]: {}".format(alias, ex.output)
+            )
+            raise ex
 
-    try:
-        subprocess.check_output(
-            (
-                os.path.join(jvm_location, "bin", "java"),
-                "-jar",
-                os.path.join(keyutil_path),
-                "-i",
-                "--new-keystore",
-                cacert_merged,
-                "--password",
-                "changeit",
-                "--import-pem-file",
-                update_cacert_path,
-                "--import-jks-file",
-                "{}:changeit".format(cacerts_file),
-            ),
-            env=env,
-            stderr=subprocess.STDOUT,
-        )
-    except Exception as ex:
-        logging.error("Error applying cacert update: {}".format(ex), ex)
-        raise ex
-
-    os.rename(cacert_merged, cacerts_file)
-    logging.debug("Update of cacerts file finished.")
+    logging.debug("Import of Mozilla certificates finished")
 
 
 def _set_jvm_locale(m2ee_section, java_version):
