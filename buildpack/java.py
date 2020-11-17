@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+import certifi
+
 from buildpack import util
 
 
@@ -79,15 +81,25 @@ def update_java_cacert(buildpack_dir, jvm_location):
     cacerts_file = os.path.join(jvm_location, "lib", "security", "cacerts")
     if not os.path.exists(cacerts_file):
         logging.warning(
-            "Cannot locate cacerts file %s. Skipping update of CA certificates.",
+            "Cannot locate Java cacerts file %s. Skipping update of CA certificates.",
             cacerts_file,
         )
         return
 
-    update_cacert_path = os.path.join(buildpack_dir, "vendor", "cacert")
+    keyutil_path = os.path.join(
+        buildpack_dir, "vendor", "cacert", "keyutil-0.4.0.jar"
+    )
+    if not os.path.exists(keyutil_path):
+        logging.warning(
+            "Cannot locate keyutil at %s. Skipping update of CA certificates.",
+            keyutil_path,
+        )
+        return
+
+    update_cacert_path = certifi.where()
     if not os.path.exists(update_cacert_path):
         logging.warning(
-            "Cannot locate cacert lib folder %s. Skipping  update of CA certificates.",
+            "Cannot locate Mozilla certificates at %s. Skipping update of CA certificates.",
             update_cacert_path,
         )
         return
@@ -100,14 +112,14 @@ def update_java_cacert(buildpack_dir, jvm_location):
             (
                 os.path.join(jvm_location, "bin", "java"),
                 "-jar",
-                os.path.join(update_cacert_path, "keyutil-0.4.0.jar"),
+                os.path.join(keyutil_path),
                 "-i",
                 "--new-keystore",
                 cacert_merged,
                 "--password",
                 "changeit",
                 "--import-pem-file",
-                os.path.join(update_cacert_path, "cacert.pem"),
+                update_cacert_path,
                 "--import-jks-file",
                 "{}:changeit".format(cacerts_file),
             ),
