@@ -192,13 +192,13 @@ class TestDataBrokerConfigs(unittest.TestCase):
             debezium_config["config"]["column.whitelist"]
             == ".*MyFirstModule.company.*,MyFirstModule.company.id,.*MyFirstModule.project.*,MyFirstModule.project.id"
         )
-    
+
     def test_streams_override(self):
         os.environ["STREAMS_VERSION"] = "0.99999"
-        assert(streams.get_pdr_stream_version() == "0.99999")
-        del os.environ["STREAMS_VERSION"] # reset
+        assert streams.get_pdr_stream_version() == "0.99999"
+        del os.environ["STREAMS_VERSION"]  # reset
         # default
-        assert(streams.get_pdr_stream_version() == "0.23.0-9")
+        assert streams.get_pdr_stream_version() == "0.23.0-9"
 
     # There are two configs for streams, one is topology.conf another is azkarra.conf
     # Make sure specifice fields would be replaced with correct value based on template file

@@ -1,5 +1,6 @@
 import socket
 import re
+import os
 
 import backoff
 
@@ -80,10 +81,14 @@ class TestCaseDataBroker(basetest.BaseTestWithPostgreSQL):
         )
         self._start_kafka_cluster()
 
+        os.environ[
+            "PACKAGE_URL"
+        ] = "https://s3-eu-west-1.amazonaws.com/databroker.dev/test-app/MyProducer902.mda"
         self.stage_container(
             "ProducerApp.mda",
             env_vars={
                 "DATABROKER_ENABLED": "true",
+                "BLOBSTORE": "https://s3-eu-west-1.amazonaws.com/databroker.dev",
                 "MXRUNTIME_DatabaseType": "PostgreSQL",
                 "MXRUNTIME_DatabaseHost": "{}:{}".format(
                     self._host, self._database_port
@@ -92,6 +97,9 @@ class TestCaseDataBroker(basetest.BaseTestWithPostgreSQL):
                 "MXRUNTIME_DatabaseUserName": "test",
                 "MXRUNTIME_DatabasePassword": "test",
                 "MX_MyFirstModule_Kafka_broker_url": "{}:{}".format(
+                    self._host, KAFKA_BROKER_PORT,
+                ),
+                "MX_MyFirstModule_broker_url": "{}:{}".format(
                     self._host, KAFKA_BROKER_PORT,
                 ),
             },
@@ -136,7 +144,8 @@ class TestCaseDataBroker(basetest.BaseTestWithPostgreSQL):
         expect_public_topic_pattern = r".*?\.{}".format(
             DATABROKER_TOPIC_FORMAT_VERSION
         )
-        assert len(re.findall(expect_public_topic_pattern, topics)) == 1
+
+        assert len(re.findall(expect_public_topic_pattern, topics)) > 0
 
         # check streaming service
         output = self.get_recent_logs()

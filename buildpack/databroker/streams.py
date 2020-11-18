@@ -26,12 +26,14 @@ KAFKA_STREAMS_JMX_PORT = "11004"
 LOCAL = ".local"
 LOG_LEVEL = "DEBUG" if util.is_buildpack_debug_logging_enabled() else "INFO"
 
+
 def get_pdr_stream_version():
     return os.environ.get("STREAMS_VERSION", DEFAULT_PDR_STREAMS_VERSION)
 
 
 PDR_STREAMS_HOME = os.path.join(
-    PDR_STREAMS_DIR, "{}-{}".format(PDR_STREAMS_FILENAME, get_pdr_stream_version())
+    PDR_STREAMS_DIR,
+    "{}-{}".format(PDR_STREAMS_FILENAME, get_pdr_stream_version()),
 )
 AZKARRA_CONF_PATH = os.path.join(
     os.getcwd(), LOCAL, PDR_STREAMS_HOME, "azkarra.conf"
